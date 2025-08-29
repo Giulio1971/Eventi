@@ -1,6 +1,3 @@
-// Parole da escludere da tutte le fonti (vuoto → nessuna esclusione)
-const excludedWords = [];
-
 // Lista dei feed RSS
 const feeds = [
   { name: "Televideo", url: "https://www.servizitelevideo.rai.it/televideo/pub/rss101.xml" }
@@ -12,7 +9,7 @@ const container = document.getElementById("news");
 const list = document.createElement("ul");
 container.appendChild(list);
 
-// Colore di sfondo base per le fonti
+// Colore di sfondo base per la fonte
 const sourceColors = {
   "Televideo": "#cceeff",   // celeste chiaro
 };
@@ -23,36 +20,62 @@ const highlightWords = ["Livorno", "Pisa", "Lucca", "Toscana"];
 let allItems = [];
 let lastSeenLinks = new Set();
 
+// --- Funzione rendering singola notizia ---
+function renderItem(item) {
+  const li = document.createElement("li");
+
+  // Controllo parole chiave per sfondo rosa
+  const combinedText = (item.title + " " + item.description).toLowerCase();
+  const hasHighlight = highlightWords.some(w => combinedText.includes(w.toLowerCase()));
+
+  li.style.backgroundColor = hasHighlight ? "#ffb6c1" : (sourceColors[item.source] || "#ffffff");
+  li.style.padding = "12px";
+  li.style.borderRadius = "8px";
+  li.style.marginBottom = "8px";
+  li.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+
+  // Formattazione data/ora
+  const dateStr = item.pubDate.toLocaleString("it-IT", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  li.innerHTML = `
+    <a href="${item.link}" target="_blank" style="color:#000; text-decoration:none; font-weight:bold;">
+      ${item.title}
+    </a><br>
+    <div style="color:#000; margin-top:4px;">
+      ${item.description || ""}
+    </div><br>
+    <em style="color:#555; font-size:14px;">
+      ${dateStr}
+    </em>
+  `;
+
+  list.appendChild(li);
+}
+
 // --- Caricamento notizie ---
 function loadNews() {
   Promise.all(
     feeds.map(feed => {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-      return fetch(apiUrl)
-        .then(res => res.json())
-        .then(data => data.items
-          .filter(item => {
-            const title = item.title || "";
-            const description = item.description || "";
-
-            // --- Filtri esclusione comuni ---
-            for (const word of excludedWords) {
-              const regex = new RegExp(word, "i");
-              if (regex.test(title) || regex.test(description)) {
-                return false;
-              }
-            }
-
-            return true; // tieni tutte
-          })
-          .map(item => ({
-            title: item.title,
-            description: item.description,
-            link: item.link,
-            pubDate: new Date(item.pubDate),
+      return fetch(feed.url)
+        .then(res => res.text())
+        .then(str => new window.DOMParser().parseFromString(str, "text/xml"))
+        .then(data => {
+          const items = [...data.querySelectorAll("item")];
+          return items.map(item => ({
+            title: item.querySelector("title")?.textContent || "",
+            description: item.querySelector("description")?.textContent || "",
+            link: item.querySelector("link")?.textContent || "",
+            pubDate: new Date(item.querySelector("pubDate")?.textContent || Date.now()),
             source: feed.name
-          }))
-        )
+          }));
+        })
         .catch(err => {
           console.error("Errore nel caricare", feed.name, err);
           return [];
@@ -68,43 +91,7 @@ function loadNews() {
     list.innerHTML = "";
 
     // Rendering di tutte le notizie
-    allItems.forEach(item => {
-      const li = document.createElement("li");
-
-      // Controllo parole chiave per sfondo rosa
-      const combinedText = (item.title + " " + item.description).toLowerCase();
-      const hasHighlight = highlightWords.some(w => combinedText.includes(w.toLowerCase()));
-
-      li.style.backgroundColor = hasHighlight ? "#ffb6c1" : (sourceColors[item.source] || "#ffffff");
-      li.style.padding = "12px";
-      li.style.borderRadius = "8px";
-      li.style.marginBottom = "8px";
-      li.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-
-      // Formattazione data/ora
-      const dateStr = item.pubDate.toLocaleString("it-IT", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
-
-      li.innerHTML = `
-        <a href="${item.link}" target="_blank" style="color:#000; text-decoration:none; font-weight:bold;">
-          ${item.title}
-        </a><br>
-        <div style="color:#000; margin-top:4px;">
-          ${item.description || ""}
-        </div><br>
-        <em style="color:#555; font-size:14px;">
-          ${dateStr}
-        </em>
-      `;
-
-      list.appendChild(li);
-    });
+    allItems.forEach(renderItem);
 
     // --- Notifiche nuove notizie ---
     const newLinks = allItems.map(n => n.link);
