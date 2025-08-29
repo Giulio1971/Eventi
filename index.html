@@ -28,6 +28,9 @@
     li {
       padding: 16px 0;
       border-bottom: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     li:last-child {
       border-bottom: none;
@@ -50,13 +53,11 @@
   </style>
 </head>
 <body>
-  <!-- <h1>Edicola</h1> -->
-  <div id="news">
-    <div id="loading">⏳ Caricamento notizie in corso...</div>
-  </div>
+  <h1>Televideo</h1>
+  <div id="news"></div>
 
   <script>
-    // se app.js fallisce o non carica, almeno resta questo messaggio
+    // messaggio fallback se app.js non si carica
     window.addEventListener("error", () => {
       const newsDiv = document.getElementById("news");
       newsDiv.innerHTML = "<p style='color:red; text-align:center;'>⚠️ Errore nel caricamento delle notizie</p>";
