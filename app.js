@@ -1,7 +1,7 @@
-// Parole da escludere da tutte le fonti
-const excludedWords = ["Oroscopo", "Basket", "Calcio"];
+// Parole da escludere da tutte le fonti (vuoto → nessuna esclusione)
+const excludedWords = [];
 
-// Lista dei feed RSS che vuoi seguire
+// Lista dei feed RSS
 const feeds = [
   { name: "Televideo", url: "https://www.servizitelevideo.rai.it/televideo/pub/rss101.xml" }
 ];
@@ -12,54 +12,16 @@ const container = document.getElementById("news");
 const list = document.createElement("ul");
 container.appendChild(list);
 
-// Mappa fonte → colore di sfondo
+// Colore di sfondo base per le fonti
 const sourceColors = {
   "Televideo": "#cceeff",   // celeste chiaro
 };
 
-let allItems = [];      // tutte le notizie scaricate
-let displayedCount = 0; // quante ne sono state mostrate
-const pageSize = 20;    // quante notizie mostrare per volta
-let lastSeenLinks = new Set(); // per notifiche
+// Parole che attivano lo sfondo rosa
+const highlightWords = ["Livorno", "Pisa", "Lucca", "Toscana"];
 
-// --- Funzione per formattare il tempo in "X min fa" ---
-function timeAgo(date) {
-  const now = new Date();
-  const diffMs = now - date;
-  const diffSec = Math.floor(diffMs / 1000);
-  const diffMin = Math.floor(diffSec / 60);
-  const diffHour = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHour / 24);
-
-  if (diffSec < 60) return "Pochi secondi fa";
-  if (diffMin < 60) return `${diffMin} min fa`;
-  if (diffHour < 24) return `${diffHour} h fa`;
-  if (diffDay === 1) return "Ieri";
-  return `${diffDay} giorni fa`;
-}
-
-// --- Rendering notizie ---
-function renderMoreNews() {
-  const slice = allItems.slice(displayedCount, displayedCount + pageSize);
-  slice.forEach(item => {
-    const li = document.createElement("li");
-    li.style.backgroundColor = sourceColors[item.source] || "#ffffff";
-    li.style.padding = "12px";
-    li.style.borderRadius = "8px";
-    li.style.marginBottom = "8px";
-    li.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
-
-    li.innerHTML = `<a href="${item.link}" target="_blank" style="color:#000; text-decoration:none;">
-                      ${item.title}
-                    </a>
-                    <span style="color:#555; font-size:14px; margin-left:8px;">
-                      ${timeAgo(item.pubDate)}
-                    </span>`;
-
-    list.appendChild(li);
-  });
-  displayedCount += slice.length;
-}
+let allItems = [];
+let lastSeenLinks = new Set();
 
 // --- Caricamento notizie ---
 function loadNews() {
@@ -81,15 +43,11 @@ function loadNews() {
               }
             }
 
-            // --- Filtro speciale per ANSA: solo notizie con "Livorno" ---
-            if (feed.name === "Ansa") {
-              return /livorno/i.test(title) || /livorno/i.test(description);
-            }
-
-            return true;
+            return true; // tieni tutte
           })
           .map(item => ({
             title: item.title,
+            description: item.description,
             link: item.link,
             pubDate: new Date(item.pubDate),
             source: feed.name
@@ -108,8 +66,45 @@ function loadNews() {
 
     // Reset lista
     list.innerHTML = "";
-    displayedCount = 0;
-    renderMoreNews();
+
+    // Rendering di tutte le notizie
+    allItems.forEach(item => {
+      const li = document.createElement("li");
+
+      // Controllo parole chiave per sfondo rosa
+      const combinedText = (item.title + " " + item.description).toLowerCase();
+      const hasHighlight = highlightWords.some(w => combinedText.includes(w.toLowerCase()));
+
+      li.style.backgroundColor = hasHighlight ? "#ffb6c1" : (sourceColors[item.source] || "#ffffff");
+      li.style.padding = "12px";
+      li.style.borderRadius = "8px";
+      li.style.marginBottom = "8px";
+      li.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+
+      // Formattazione data/ora
+      const dateStr = item.pubDate.toLocaleString("it-IT", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+
+      li.innerHTML = `
+        <a href="${item.link}" target="_blank" style="color:#000; text-decoration:none; font-weight:bold;">
+          ${item.title}
+        </a><br>
+        <div style="color:#000; margin-top:4px;">
+          ${item.description || ""}
+        </div><br>
+        <em style="color:#555; font-size:14px;">
+          ${dateStr}
+        </em>
+      `;
+
+      list.appendChild(li);
+    });
 
     // --- Notifiche nuove notizie ---
     const newLinks = allItems.map(n => n.link);
@@ -125,13 +120,6 @@ function loadNews() {
   });
 }
 
-// --- Infinite Scroll ---
-window.addEventListener("scroll", () => {
-  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
-    renderMoreNews();
-  }
-});
-
 // --- Richiesta permesso notifiche ---
 if ("Notification" in window && Notification.permission !== "granted") {
   Notification.requestPermission();
@@ -140,5 +128,5 @@ if ("Notification" in window && Notification.permission !== "granted") {
 // Caricamento iniziale
 loadNews();
 
-// Refresh ogni 5 minuti (300,000 ms)
+// Refresh ogni 5 minuti
 setInterval(loadNews, 300000);
