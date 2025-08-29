@@ -2,17 +2,17 @@ async function loadNews() {
   const newsDiv = document.getElementById("news");
   newsDiv.innerHTML = "<p style='text-align:center;'>⏳ Caricamento notizie in corso...</p>";
 
-  const feedUrl = encodeURIComponent("https://www.servizitelevideo.rai.it/televideo/pub/rss101.xml");
-  const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${feedUrl}`;
-
   try {
-    const response = await fetch(apiUrl);
+    // Fetch the RSS XML
+    const response = await fetch("https://www.servizitelevideo.rai.it/televideo/pub/rss101.xml");
     if (!response.ok) throw new Error("HTTP error " + response.status);
 
-    const data = await response.json();
-    const items = data.items;
+    const xmlText = await response.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
 
-    if (!items || items.length === 0) {
+    const items = xmlDoc.querySelectorAll("item");
+    if (!items.length) {
       newsDiv.innerHTML = "<p style='text-align:center; color:#555;'>Nessuna notizia disponibile.</p>";
       return;
     }
@@ -21,38 +21,26 @@ async function loadNews() {
     const highlightWords = ["Livorno", "Pisa", "Lucca", "Toscana"];
 
     items.forEach(item => {
-      const title = item.title || "Senza titolo";
-      const description = item.description || "";
-      const pubDate = new Date(item.pubDate).toLocaleString("it-IT", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
+      const title = item.querySelector("title")?.textContent || "Senza titolo";
+      const description = item.querySelector("description")?.textContent || "";
 
       const li = document.createElement("li");
       li.innerHTML = `
         <strong>${title}</strong><br>
-        ${description}<br>
-        `;
+        <div style="margin-top:6px;">${description}</div>
+      `;
 
+      // Highlight background if contains keywords
       if (highlightWords.some(w => (title + " " + description).toLowerCase().includes(w.toLowerCase()))) {
-        li.style.backgroundColor = "#ffe6f2"; // rosa chiaro
+        li.style.backgroundColor = "#ffe6f2"; // pink
       } else {
-        li.style.backgroundColor = "#e6f0ff"; // celeste chiaro
+        li.style.backgroundColor = "#e6f0ff"; // light blue
       }
-
-      li.style.padding = "12px";
-      li.style.borderRadius = "8px";
-      li.style.marginBottom = "8px";
-      li.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
 
       ul.appendChild(li);
     });
 
-    newsDiv.innerHTML = "";
+    newsDiv.innerHTML = ""; // remove loading message
     newsDiv.appendChild(ul);
 
   } catch (error) {
