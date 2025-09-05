@@ -29,8 +29,7 @@ async function loadNews() {
       li.innerHTML = `
         <strong>${title}</strong><br><br>
         ${description}<br>
-        </em>
-      `;
+              `;
 
       if (highlightWords.some(w => (title + " " + description).toLowerCase().includes(w.toLowerCase()))) {
         li.style.backgroundColor = "#ffe6f2"; // rosa chiaro
