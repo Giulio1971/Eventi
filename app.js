@@ -23,20 +23,13 @@ async function loadNews() {
     items.forEach(item => {
       const title = item.title || "Senza titolo";
       const description = item.description || "";
-      const pubDate = new Date(item.pubDate).toLocaleString("it-IT", {
-        weekday: "short",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit"
-      });
+      );
 
       const li = document.createElement("li");
       li.innerHTML = `
         <strong>${title}</strong><br><br>
         ${description}<br>
-        //<em>${pubDate}</em>
+        </em>
       `;
 
       if (highlightWords.some(w => (title + " " + description).toLowerCase().includes(w.toLowerCase()))) {
