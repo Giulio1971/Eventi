@@ -34,9 +34,9 @@ async function loadNews() {
 
       const li = document.createElement("li");
       li.innerHTML = `
-        <strong>${title}</strong><br>
+        <strong>${title}</strong><br><br>
         ${description}<br>
-        <em>${pubDate}</em>
+        //<em>${pubDate}</em>
       `;
 
       if (highlightWords.some(w => (title + " " + description).toLowerCase().includes(w.toLowerCase()))) {
