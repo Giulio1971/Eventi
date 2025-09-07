@@ -1,4 +1,4 @@
-// Lista completa dei feed RSS (ordine importante)
+// Lista feed (ordine importante)
 const feeds = [
   { name: "Livorno", url: "https://politepol.com/fd/7FAzGNxzlGrH.xml" },
   { name: "Pisa", url: "https://politepol.com/fd/kWox2Fs7UboR.xml" },
@@ -43,31 +43,40 @@ function renderAllNews() {
   });
 }
 
+// --- Parser RSS ---
+function parseRSS(xml, source) {
+  const items = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xml, "application/xml");
+  const entries = doc.querySelectorAll("item");
+
+  entries.forEach(entry => {
+    items.push({
+      title: entry.querySelector("title")?.textContent || "Titolo mancante",
+      link: entry.querySelector("link")?.textContent || "#",
+      description: entry.querySelector("description")?.textContent || "",
+      pubDate: new Date(entry.querySelector("pubDate")?.textContent || Date.now()),
+      source
+    });
+  });
+
+  return items;
+}
+
 // --- Caricamento notizie ---
 function loadNews() {
   Promise.all(
     feeds.map(feed => {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}`;
-      return fetch(apiUrl)
-        .then(res => res.json())
-        .then(data =>
-          (data.items || []).map(item => {
-            return {
-              title: item.title || "Titolo mancante",
-              link: item.link || "#",
-              description: item.description || "",
-              pubDate: new Date(item.pubDate || Date.now()),
-              source: feed.name
-            };
-          })
-        )
+      return fetch(feed.url)
+        .then(res => res.text())
+        .then(xml => parseRSS(xml, feed.name))
         .catch(err => {
           console.error("Errore nel caricare", feed.name, err);
           return [];
         });
     })
   ).then(results => {
-    // Mantiene l’ordine dei feed come dichiarato sopra
+    // Mantiene l’ordine dei feed
     allItems = results.flat();
     renderAllNews();
   });
