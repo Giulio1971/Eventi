@@ -67,16 +67,16 @@ function parseRSS(xml, source) {
 function loadNews() {
   Promise.all(
     feeds.map(feed => {
-      return fetch(feed.url)
-        .then(res => res.text())
-        .then(xml => parseRSS(xml, feed.name))
+      const proxyUrl = "https://api.allorigins.win/get?url=" + encodeURIComponent(feed.url);
+      return fetch(proxyUrl)
+        .then(res => res.json())
+        .then(data => parseRSS(data.contents, feed.name))
         .catch(err => {
           console.error("Errore nel caricare", feed.name, err);
           return [];
         });
     })
   ).then(results => {
-    // Mantiene l’ordine dei feed
     allItems = results.flat();
     renderAllNews();
   });
